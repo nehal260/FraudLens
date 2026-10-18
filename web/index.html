@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FraudLens - card fraud detection</title>
+<meta name="description" content="FraudLens learns from past card transactions and scores new ones for fraud, right in your browser.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap head-row">
+    <a class="brand" href="#overview" aria-label="FraudLens home">
+      <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <circle cx="17" cy="17" r="11.5" fill="#fffdf8" stroke="#1b2a2e" stroke-width="2.6"/>
+        <path d="M9 18.5h4l2.4-6 3.4 11 2.3-5H26" stroke="#1b6a65" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M25.5 25.5 35 35" stroke="#1b2a2e" stroke-width="3.6" stroke-linecap="round"/>
+        <circle cx="29.5" cy="8.5" r="3.4" fill="#c4412a"/>
+      </svg>
+      <span class="brand-name">Fraud<i>Lens</i></span>
+    </a>
+    <nav class="tabs" id="tabs" aria-label="Sections">
+      <a href="#overview" data-tab="overview">Overview</a>
+      <a href="#check" data-tab="check">Check a Transaction</a>
+      <a href="#batch" data-tab="batch">Check Many (CSV)</a>
+      <a href="#live" data-tab="live">Live Monitor</a>
+      <a href="#models" data-tab="models">Model Results</a>
+      <a href="#data" data-tab="data">About the Data</a>
+    </nav>
+  </div>
+</header>
+
+<div class="demo-bar hide" id="demoBar">
+  <div class="wrap">
+    <b>Demo build</b>
+    <span>The numbers on this page come from stand-in data, not the real card file. Run <span class="mono">ml/train_model.py</span> and <span class="mono">ml/export_for_web.py</span> on the real <span class="mono">creditcard.csv</span> to switch to real results.</span>
+    <button id="demoClose" aria-label="Dismiss">&times;</button>
+  </div>
+</div>
+
+<main>
+
+<!-- ============================================================ OVERVIEW -->
+<section class="panel" data-panel="overview">
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <div class="eyebrow">Card fraud detection</div>
+        <h1>Finding the few
+          <em>bad apples
+            <svg viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 12 C 40 4, 70 17, 110 9 S 190 3, 230 11 S 280 14, 297 6"/></svg>
+          </em>
+          in a very large basket.</h1>
+        <p class="lede">Banks handle millions of card payments and only a handful are fraud. FraudLens learns from old transactions that were already marked normal or fraud, then looks at a new one and says how suspicious it is.</p>
+        <div class="hero-cta">
+          <a class="btn" href="#check">Try a transaction <span class="arr">&rarr;</span></a>
+          <a class="btn ghost" href="#models">See the results</a>
+        </div>
+        <span class="scribble">it all runs in your browser &#8599;</span>
+      </div>
+      <div class="slip" id="heroSlip" aria-label="Example transaction slip">
+        <h4>FraudLens &middot; check</h4>
+        <hr>
+        <div class="row"><span>Transaction</span><span id="hsId">-</span></div>
+        <div class="row"><span>Amount</span><span id="hsAmt">-</span></div>
+        <div class="row"><span>Time</span><span id="hsTime">-</span></div>
+        <div class="row"><span>Trees voting fraud</span><span id="hsVotes">-</span></div>
+        <hr>
+        <div class="big" id="hsScore">-</div>
+        <div class="muted" style="text-align:center;font-size:.76rem">chance of fraud</div>
+        <div class="stamp red" id="hsStamp" style="margin:34px 0 0 4px">Flagged</div>
+      </div>
+    </div>
+
+    <div class="strip" id="strip">
+      <div><b data-count="0" id="stTotal">-</b><span>card transactions studied</span></div>
+      <div><b data-count="0" id="stFraud">-</b><span>of them were fraud</span></div>
+      <div><b id="stRecall">-</b><span>of real frauds caught (recall)</span></div>
+      <div><b id="stPrec">-</b><span>of alarms were right (precision)</span></div>
+    </div>
+
+    <div class="section-gap">
+      <div class="eyebrow">How it works</div>
+      <h2>Five parts, the complete workflow</h2>
+      <div class="steps">
+        <div class="step"><div class="dot">1</div><h4>The data</h4><p>Card transactions with a time, an amount and 28 scrambled columns, each already labelled normal or fraud.</p></div>
+        <div class="step"><div class="dot">2</div><h4>The problem</h4><p>Fraud is a tiny fraction. A lazy model that says "all normal" looks great on accuracy and catches nothing.</p></div>
+        <div class="step"><div class="dot">3</div><h4>Training</h4><p>80% of rows to train on, 20% held back for testing, split so both keep the same fraud share. Fraud examples are weighted up.</p></div>
+        <div class="step"><div class="dot">4</div><h4>Comparing</h4><p>Logistic Regression, Gradient Boosting and Random Forest, all evaluated on the same held-out test set.</p></div>
+        <div class="step"><div class="dot">5</div><h4>The app</h4><p>The winning forest is exported and runs in this page: pick a transaction, get a score and a verdict.</p></div>
+      </div>
+    </div>
+
+    <div class="section-gap">
+      <div class="eyebrow">What's inside</div>
+      <h2>Everything you can do here</h2>
+      <div class="grid g3" style="margin-top:26px">
+        <a class="card lift feat" href="#check">
+          <div class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
+          <h3>Check a Transaction</h3>
+          <p>Score one transaction, see which columns pushed the score, then drag sliders to ask "what if?".</p>
+          <span class="go">Open &rarr;</span>
+        </a>
+        <a class="card lift feat" href="#batch">
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+          <h3>Check Many (CSV)</h3>
+          <p>Drop a whole file in. Every row is scored on your device and the flagged ones can be downloaded.</p>
+          <span class="go">Open &rarr;</span>
+        </a>
+        <a class="card lift feat" href="#live">
+          <span class="chip teal tag">new</span>
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+          <h3>Live Monitor</h3>
+          <p>Watch payments arrive one by one while the model screens them, like a bank's fraud desk.</p>
+          <span class="go">Open &rarr;</span>
+        </a>
+        <a class="card lift feat" href="#models">
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+          <h3>Model Results</h3>
+          <p>Three models side by side, plus a threshold lab and a cost simulator that finds the best cut-off.</p>
+          <span class="go">Open &rarr;</span>
+        </a>
+        <a class="card lift feat" href="#data">
+          <span class="chip teal tag">new</span>
+          <div class="ic"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><circle cx="12" cy="16" r="2.5"/></svg></div>
+          <h3>About the Data</h3>
+          <p>Hunt for the bad apples yourself, run the lazy model, and explore how fraud differs column by column.</p>
+          <span class="go">Open &rarr;</span>
+        </a>
+        <a class="card lift feat" href="#models">
+          <span class="chip teal tag">new</span>
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></div>
+          <h3>Model Card</h3>
+          <p>How the model was trained: data split, class weighting, hyperparameters and honest limitations.</p>
+          <span class="go">Open &rarr;</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================= CHECK A TRANSACTION -->
+<section class="panel" data-panel="check">
+  <div class="wrap">
+    <div class="page-head">
+      <div class="eyebrow">Check a Transaction</div>
+      <h2>Pick a transaction and see what the model thinks</h2>
+      <p>These are real rows the model has never seen. Pick one, read the verdict, then try to change its mind with the sliders.</p>
+    </div>
+
+    <div class="split">
+      <div class="grid" style="gap:20px">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="card-label" style="margin:0">1. Choose a transaction</span>
+            <button class="btn sm ghost" id="btnRandom">Surprise me</button>
+          </div>
+          <div class="picker" id="picker"></div>
+          <div class="callout small">Why can't I type my own card details? The 28 columns (V1 to V28) are scrambled on purpose to protect people's privacy. Only the people who scrambled them can read them, so the app uses sample transactions.</div>
+        </div>
+
+        <div class="card" id="slipCard">
+          <span class="card-label">Transaction slip</span>
+          <dl class="kv" id="slipKv"></dl>
+          <div style="margin-top:18px">
+            <span class="card-label" style="margin-bottom:2px">Fingerprint of the 28 hidden columns</span>
+            <div class="fprint" id="fprint"></div>
+            <div class="legend-line"><span>lower than usual</span><span class="bar"></span><span>higher than usual</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid" style="gap:20px">
+        <div class="card" id="resultCard">
+          <span class="card-label">2. The verdict</span>
+          <div class="gauge-wrap">
+            <div class="gauge">
+              <svg viewBox="0 0 220 124" aria-hidden="true">
+                <path class="track" d="M 20 110 A 90 90 0 0 1 200 110"/>
+                <path class="fill" id="gFill" d="M 20 110 A 90 90 0 0 1 200 110" stroke-dasharray="283" stroke-dashoffset="283" stroke="#3b8758"/>
+                <g id="gTick"><line stroke="#1b2a2e" stroke-width="2.4" stroke-linecap="round"/></g>
+              </svg>
+              <div class="num"><b id="gNum">0%</b><span>chance of fraud</span></div>
+            </div>
+            <div class="verdict">
+              <div class="stamp green" id="stamp">Approved</div>
+              <p id="verdictText"></p>
+              <div id="truthBox"></div>
+            </div>
+          </div>
+
+          <div class="thr">
+            <label>Alert threshold <b class="thr-val">50%</b></label>
+            <input type="range" class="thr-range" min="5" max="95" step="1" value="50" aria-label="Alert threshold">
+            <div class="ends"><span>catch more fraud, more false alarms</span><span>fewer false alarms, miss more fraud</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <span class="card-label">100 trees, 100 opinions</span>
+          <div class="votes" id="votes"></div>
+          <p class="small muted" style="margin:6px 0 0" id="voteText"></p>
+        </div>
+
+        <div class="card">
+          <span class="card-label">Why this score?</span>
+          <div id="why"></div>
+          <p class="small muted" style="margin:10px 0 0">Each column is put back to a typical normal value, one at a time. If the score drops a lot, that column was pushing it towards fraud (red). Green bars were pulling it towards normal.</p>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+            <span class="card-label" style="margin:0">What-if sandbox</span>
+            <button class="btn sm ghost" id="btnReset">Reset</button>
+          </div>
+          <p class="small muted" style="margin:8px 0 14px">Nudge the columns the model relies on most and watch the score move.</p>
+          <div class="whatif" id="whatif"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================== BATCH -->
+<section class="panel" data-panel="batch">
+  <div class="wrap">
+    <div class="page-head">
+      <div class="eyebrow">Check Many (CSV)</div>
+      <h2>Score a whole file at once</h2>
+      <p>Drop in a CSV with the columns <span class="mono">Time, V1 ... V28, Amount</span>. An optional <span class="mono">Class</span> column lets FraudLens mark its own homework. The file never leaves your computer.</p>
+    </div>
+
+    <div class="drop" id="drop">
+      <svg viewBox="0 0 48 48"><path d="M24 33V9m0 0-9 9m9-9 9 9M8 31v7a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2v-7"/></svg>
+      <h3>Drop a CSV here</h3>
+      <p class="muted" style="margin:0">or choose one from your computer</p>
+      <div class="acts">
+        <label class="btn" for="fileInput">Choose file</label>
+        <input type="file" id="fileInput" accept=".csv,text/csv" hidden>
+        <button class="btn ghost" id="btnSampleCsv">Use the sample file (300 rows)</button>
+        <a class="btn ghost" href="assets/sample_transactions.csv" download>Download the sample</a>
+      </div>
+    </div>
+
+    <div id="batchBusy" class="hide"><div class="progress"><i id="batchBar"></i></div><p class="small muted" id="batchMsg"></p></div>
+    <div id="batchErr" class="callout red hide" style="margin-top:18px"></div>
+
+    <div id="batchOut" class="hide" style="margin-top:34px">
+      <div class="tiles" id="batchTiles"></div>
+
+      <div class="split" style="margin-top:24px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+        <div class="card">
+          <span class="card-label">How the scores are spread</span>
+          <svg class="chart" id="batchHist" viewBox="0 0 520 220"></svg>
+          <div class="thr">
+            <label>Alert threshold <b class="thr-val">50%</b></label>
+            <input type="range" class="thr-range" min="5" max="95" step="1" value="50" aria-label="Alert threshold">
+          </div>
+        </div>
+        <div class="card" id="batchTruth"></div>
+      </div>
+
+      <div class="toolbar">
+        <div class="seg" id="batchFilter">
+          <button data-f="all" class="on">All rows</button>
+          <button data-f="flag">Flagged</button>
+          <button data-f="ok">Approved</button>
+        </div>
+        <input type="search" id="batchSearch" placeholder="Row number" style="width:170px">
+        <span class="sp"></span>
+        <span class="small muted" id="batchCount"></span>
+        <button class="btn sm" id="btnDownload">Download flagged rows</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th data-s="row">Row</th><th data-s="time">Time</th><th data-s="amount">Amount</th>
+            <th data-s="score">Fraud chance</th><th data-s="flag">Verdict</th><th data-s="truth" id="thTruth">Actual</th>
+          </tr></thead>
+          <tbody id="batchBody"></tbody>
+        </table>
+      </div>
+      <p class="small muted" style="margin-top:10px">Click any row to open it in Check a Transaction.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================== LIVE -->
+<section class="panel" data-panel="live">
+  <div class="wrap">
+    <div class="page-head">
+      <div class="eyebrow">Live Monitor</div>
+      <h2>A fraud desk, in miniature</h2>
+      <p>Held-back transactions arrive one at a time and are screened as they land. Fraud is shown far more often here than in real life (about one in eight) so you can see the model work.</p>
+    </div>
+
+    <div class="live-top">
+      <div class="tile"><b id="lvSeen">0</b><span>screened</span></div>
+      <div class="tile red"><b id="lvFlag">0</b><span>flagged</span></div>
+      <div class="tile green"><b id="lvStop" data-money="1">0</b><span>fraud value stopped</span></div>
+      <div class="tile"><b id="lvFalse">0</b><span>false alarms</span></div>
+      <div class="tile red"><b id="lvMiss">0</b><span>frauds missed</span></div>
+    </div>
+
+    <div class="split" style="grid-template-columns:minmax(0,3fr) minmax(0,2fr)">
+      <div>
+        <div class="toolbar" style="margin-top:0">
+          <button class="btn" id="liveToggle"><span class="pulse"></span><span id="liveLabel">Start</span></button>
+          <label class="field" style="flex-direction:row;align-items:center;gap:10px">Speed
+            <input type="range" id="liveSpeed" min="1" max="8" value="3" style="width:140px" aria-label="Speed">
+          </label>
+          <button class="btn ghost sm" id="liveClear">Clear</button>
+        </div>
+        <div class="feed" id="liveFeed"><div class="callout">Press <b>Start</b> to begin screening payments.</div></div>
+      </div>
+      <div class="grid" style="gap:20px">
+        <div class="card">
+          <span class="card-label">Recent scores</span>
+          <svg class="chart" id="liveSpark" viewBox="0 0 400 170"></svg>
+          <div class="thr">
+            <label>Alert threshold <b class="thr-val">50%</b></label>
+            <input type="range" class="thr-range" min="5" max="95" step="1" value="50" aria-label="Alert threshold">
+          </div>
+        </div>
+        <div class="callout small">Try it: slide the threshold down while the feed runs. More payments get flagged, including more false alarms. Slide it up and some real fraud slips through.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ MODELS -->
+<section class="panel" data-panel="models">
+  <div class="wrap">
+    <div class="page-head">
+      <div class="eyebrow">Model Results</div>
+      <h2>Three models, one test set</h2>
+      <p id="modelsLede"></p>
+    </div>
+
+    <div class="grid g3" id="modelCards" style="margin-top:8px"></div>
+
+    <div class="grid g2" style="margin-top:22px">
+      <div class="card">
+        <span class="card-label">Head to head</span>
+        <div class="legend" id="cmpLegend"></div>
+        <svg class="chart" id="cmpChart" viewBox="0 0 520 250"></svg>
+      </div>
+      <div class="card">
+        <span class="card-label">Why not just use accuracy?</span>
+        <div id="accBox"></div>
+      </div>
+    </div>
+
+    <div class="section-gap">
+      <div class="eyebrow">Threshold lab</div>
+      <h2>Catch more fraud, or annoy fewer customers?</h2>
+      <p class="muted" style="max-width:720px;margin-top:10px">The model gives every transaction a score. The bank decides where to draw the line. Pick a model and slide the line.</p>
+      <div class="grid g2" style="margin-top:24px">
+        <div class="card">
+          <div class="seg" id="labModel" style="margin-bottom:14px"></div>
+          <div class="thr" style="border:0;margin:0;padding:0">
+            <label>Alert threshold <b id="labVal">50%</b></label>
+            <input type="range" id="labRange" min="1" max="99" step="1" value="50" aria-label="Lab threshold">
+          </div>
+          <div class="readout" id="labReadout"></div>
+          <div id="labSay" class="callout small" style="margin-top:16px"></div>
+        </div>
+        <div class="card">
+          <span class="card-label">Precision vs recall, move your mouse across</span>
+          <div class="legend" id="prLegend"></div>
+          <svg class="chart" id="prChart" viewBox="0 0 520 300" style="cursor:crosshair"></svg>
+          <p class="small muted" style="margin:8px 0 0" id="prRead">Hover the chart to read the trade-off at each recall level.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-gap">
+      <div class="eyebrow">Cost simulator</div>
+      <h2>What does a mistake cost the bank?</h2>
+      <p class="muted" style="max-width:720px;margin-top:10px">A missed fraud costs money. A false alarm costs a reviewer's time and an annoyed customer. Put in your own numbers and FraudLens finds the threshold with the lowest total cost.</p>
+      <div class="card" style="margin-top:24px">
+        <div class="fields">
+          <label class="field">Loss per missed fraud<input type="number" id="costMiss" value="150" min="0"></label>
+          <label class="field">Cost per alert reviewed<input type="number" id="costAlert" value="5" min="0"></label>
+          <label class="field">Currency
+            <select id="currency"><option>$</option><option>&euro;</option><option>&pound;</option><option>&#8377;</option></select>
+          </label>
+          <div class="seg" id="costModel"></div>
+        </div>
+        <svg class="chart" id="costChart" viewBox="0 0 900 260"></svg>
+        <div class="readout" id="costReadout"></div>
+      </div>
+    </div>
+
+    <div class="section-gap">
+      <div class="card">
+        <span class="card-label">Where the random forest puts normal and fraud (log scale)</span>
+        <div class="legend"><span><i style="background:var(--teal)"></i>normal</span><span><i style="background:var(--alert)"></i>fraud</span></div>
+        <svg class="chart" id="scoreHist" viewBox="0 0 900 230"></svg>
+        <p class="small muted" style="margin:8px 0 0">A good model pushes normal transactions to the left and fraud to the right. The overlap in the middle is where the hard decisions are.</p>
+      </div>
+    </div>
+
+    <div class="section-gap">
+      <div class="eyebrow">Model card</div>
+      <h2>How this model was built</h2>
+      <div class="grid g2" style="margin-top:24px">
+        <div class="card">
+          <span class="card-label">Training setup</span>
+          <dl class="kv" id="mcSetup"></dl>
+        </div>
+        <div class="card">
+          <span class="card-label">Limitations to keep in mind</span>
+          <ul class="small muted" style="margin:0;padding-left:18px;display:grid;gap:8px">
+            <li>The public data covers a short window of European card payments, so patterns may not transfer to other regions or years.</li>
+            <li>V1 to V28 are PCA-scrambled, so a flag cannot be explained in business terms. The "why this score" view shows which scrambled columns mattered, not what they mean.</li>
+            <li>Results are on one train/test split. A production system would use time-based validation and monitor drift.</li>
+            <li>Fraud tactics change. The model would need regular retraining and human review of its flags.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================== DATA -->
+<section class="panel" data-panel="data">
+  <div class="wrap">
+    <div class="page-head">
+      <div class="eyebrow">About the Data</div>
+      <h2>Why fraud is so hard to find</h2>
+      <p id="dataLede"></p>
+    </div>
+
+    <div class="split" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+      <div class="card">
+        <span class="card-label">The basket: 10,000 transactions</span>
+        <div class="basket-wrap"><canvas id="basket" width="1040" height="1040" aria-label="Grid of 10,000 dots with a few hidden fraud dots"></canvas></div>
+        <div class="toolbar" style="margin-bottom:0">
+          <button class="btn sm" id="btnReveal">Reveal the bad apples</button>
+          <button class="btn sm ghost" id="btnShake">Shake the basket</button>
+        </div>
+        <p class="small muted" style="margin:10px 0 0" id="basketNote"></p>
+      </div>
+      <div class="grid" style="gap:20px">
+        <div class="card">
+          <span class="card-label">Meet the lazy model</span>
+          <p style="margin:0 0 6px">It says "everything is normal" every single time.</p>
+          <button class="btn sm" id="btnLazy">Run the lazy model</button>
+          <div class="lazy hide" id="lazyOut">
+            <div class="small muted">Scored on the whole dataset</div>
+            <div class="res">
+              <div><span class="small muted">Accuracy</span><b id="lzAcc">0%</b></div>
+              <div class="bad"><span class="small muted">Frauds caught</span><b id="lzCaught">0</b></div>
+            </div>
+            <p class="small" style="margin:12px 0 0">Looks brilliant, catches nothing. That is why FraudLens is judged on precision and recall instead.</p>
+          </div>
+        </div>
+        <div class="card">
+          <span class="card-label">The 28 scrambled columns</span>
+          <p class="small muted" style="margin:0">V1 to V28 were produced by a mathematical scrambling (PCA) before the data was published, so nobody can read the original card details. The model can still learn patterns in them. It just can't tell us in words what each one means.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:22px">
+      <div class="card">
+        <span class="card-label">Transaction amount, share of each group</span>
+        <div class="legend"><span><i style="background:var(--teal)"></i>normal</span><span><i style="background:var(--alert)"></i>fraud</span></div>
+        <svg class="chart" id="amtChart" viewBox="0 0 520 240"></svg>
+      </div>
+      <div class="card">
+        <span class="card-label">Time of day, share of each group</span>
+        <div class="legend"><span><i style="background:var(--teal)"></i>normal</span><span><i style="background:var(--alert)"></i>fraud</span></div>
+        <svg class="chart" id="hourChart" viewBox="0 0 520 240"></svg>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:22px">
+      <div class="card">
+        <span class="card-label">Columns the forest leans on most</span>
+        <div id="impChart"></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px">
+          <span class="card-label" style="margin:0">Column explorer</span>
+          <select id="featSelect" aria-label="Column"></select>
+        </div>
+        <div class="legend"><span><i style="background:var(--teal)"></i>normal</span><span><i style="background:var(--alert)"></i>fraud</span></div>
+        <svg class="chart" id="featChart" viewBox="0 0 520 240"></svg>
+        <p class="small muted" style="margin:6px 0 0" id="featNote"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div><b>FraudLens</b><br>A card fraud detection project.</div>
+    <div>Data: credit card fraud dataset (ULB / Worldline, published on Kaggle).<br>Model: random forest trained with scikit-learn, scored in your browser.</div>
+  </div>
+</footer>
+
+<div id="tip" role="tooltip"></div>
+<div id="toast" role="status"></div>
+
+<script src="data/forest.js"></script>
+<script src="data/results.js"></script>
+<script src="data/pool.js"></script>
+<script src="data/stats.js"></script>
+<script src="js/core.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/overview.js"></script>
+<script src="js/check.js"></script>
+<script src="js/batch.js"></script>
+<script src="js/live.js"></script>
+<script src="js/models.js"></script>
+<script src="js/data.js"></script>
+<script src="js/boot.js"></script>
+</body>
+</html>

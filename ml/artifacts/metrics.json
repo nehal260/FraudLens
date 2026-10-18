@@ -1,0 +1,54 @@
+{
+  "demo": false,
+  "threshold": 0.5,
+  "seed": 42,
+  "rows": 284807,
+  "frauds": 492,
+  "train_rows": 227845,
+  "test_rows": 56962,
+  "test_frauds": 98,
+  "models": [
+    {
+      "name": "Logistic Regression",
+      "tp": 90,
+      "fp": 1386,
+      "fn": 8,
+      "tn": 55478,
+      "precision": 0.06097560975609756,
+      "recall": 0.9183673469387755,
+      "f1": 0.11435832274459974,
+      "roc_auc": 0.9720834996210077,
+      "pr_auc": 0.7189705771419241,
+      "key": "logreg",
+      "train_seconds": 3.0
+    },
+    {
+      "name": "Gradient Boosting",
+      "tp": 89,
+      "fp": 409,
+      "fn": 9,
+      "tn": 56455,
+      "precision": 0.178714859437751,
+      "recall": 0.9081632653061225,
+      "f1": 0.2986577181208054,
+      "roc_auc": 0.9772056385159578,
+      "pr_auc": 0.7247999932671928,
+      "key": "gboost",
+      "train_seconds": 587.3
+    },
+    {
+      "name": "Random Forest",
+      "tp": 81,
+      "fp": 15,
+      "fn": 17,
+      "tn": 56849,
+      "precision": 0.84375,
+      "recall": 0.826530612244898,
+      "f1": 0.8350515463917526,
+      "roc_auc": 0.9750472484294788,
+      "pr_auc": 0.8497359099334421,
+      "key": "forest",
+      "train_seconds": 58.4
+    }
+  ]
+}

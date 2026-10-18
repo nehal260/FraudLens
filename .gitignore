@@ -1,0 +1,9 @@
+@"
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.vscode/
+ml/data/creditcard.csv
+"@ | Set-Content .gitignore
